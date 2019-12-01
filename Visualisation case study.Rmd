@@ -1,0 +1,246 @@
+---
+title: "Visualisation case study"
+author: "Phani Kumar"
+date: "11/6/2019"
+output: html_document
+---
+
+```{r}
+options(scipen = 999)
+
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(flipTime)
+library(plotly)
+library(plotrix)
+
+```
+
+
+```{r}
+
+salesdata <- read.csv('C:\\Users\\PHANI KUMAR\\Desktop\\R case study 3 (Visualization)\\SalesData.csv')
+
+```
+
+
+```{r}
+#1.compare sales for 2015 and 2016 by region
+
+a1 <- salesdata%>%group_by(Region)%>%summarise(sales=sum(Sales2015))
+
+a1$year <- rep("TotalSales2015")
+
+a1$sales <- round(a1$sales)
+
+a2 <- salesdata%>%group_by(Region)%>%summarise(sales = sum(Sales2016))
+
+a2$year <- rep("TotalSales2016")
+
+a2$sales <- round(a2$sales)
+
+q1 <- rbind(a1,a2)
+
+ggplot(q1) + aes(x = Region, y = sales, fill = year) + 
+  geom_bar(stat = "identity",position = "dodge")+geom_text(aes(label = q1$sales),position = position_dodge(width = 0.9))
+
+
+```
+
+
+```{r}
+
+#2.pie chart for sales for each region for 2016
+
+q2 <- salesdata %>% dplyr::group_by(Region) %>% 
+  dplyr::summarise(Sales_2016 = sum(Sales2016))
+
+x <- q2$Sales_2016
+y <- q2$Region
+
+pie(x,y)
+
+pct <- round(prop.table(q2$Sales_2016) * 100,1)
+lbl <- paste(pct,"% : ")
+
+pie(x = x, labels = paste0(lbl,q2$Region),col = rainbow(length(x)))
+
+pie3D(x = x, labels = paste0(lbl,q2$Region),explode = 0.2,col = rainbow(length(x)))
+
+```
+
+
+```{r}
+
+#3. compare sales of 2015 with region and tiers
+
+d1 <- salesdata%>%group_by(Region,Tier)%>%summarise(Sales=round(sum(Sales2015)))
+
+d1$year <- rep("TotalSales2015")
+
+d2 <- salesdata%>%group_by(Region,Tier)%>%summarise(Sales = round(sum(Sales2016)))
+
+d2$year <- rep("TotalSales2016")
+
+q3 <- rbind(d1,d2)
+
+plotly::ggplotly(ggplot(q3) + aes(x = Tier, y = Sales, fill = year) + 
+  geom_bar(stat = "identity",position = "dodge")+facet_grid(. ~ Region))
+
+```
+
+
+```{r}
+#4.In east region which state registered a decline in 2016 as compared to 2015
+
+e1 <- dplyr::filter(salesdata,Region == "East")[,c("State","Sales2015")]
+
+e.1 <- dplyr::group_by(e1,State)%>%dplyr::summarise(sales = sum(Sales2015))
+
+e.1$year <- rep("TotalSales2015")
+
+e.1$sales <- round(e.1$sales)
+
+
+
+e2 <- dplyr::filter(salesdata,Region == "East")[,c("State","Sales2016")]
+
+e.2 <- dplyr::group_by(e2,State)%>%dplyr::summarise(sales = sum(Sales2016))
+
+e.2$year <- rep("TotalSales2016")
+
+e.2$sales <- round(e.2$sales)
+
+q4 <- rbind(e.1,e.2)
+
+plotly::ggplotly(ggplot(q4) + aes(x = State, y = sales, fill = year) + 
+  geom_bar(stat = "identity",position = "dodge"))
+
+# NY registered a decrease in sales in 2016 in the East region 
+
+```
+
+
+```{r}
+
+#5.In all the tiers which division saw a decline in no of units sold in 2016 compared to 2015?
+
+f1 <- dplyr::filter(salesdata,Tier == "High")[,c("Division","Units2015")]
+
+f.1 <- dplyr::group_by(f1,Division)%>%dplyr::summarise(Units = sum(Units2015))
+
+f.1$Year <- rep("TotalUnits2015")
+
+f.1$Units <- round(f.1$Units)
+
+f2 <- dplyr::filter(salesdata,Tier == "High")[,c("Division","Units2016")]
+
+f.2 <- dplyr::group_by(f2,Division)%>%dplyr::summarise(Units = sum(Units2016))
+
+f.2$Year <- rep("TotalUnits2016")
+
+f.2$Units <- round(f.2$Units)
+
+q5 <- rbind(f.1,f.2)
+
+plotly::ggplotly(ggplot(q5) + aes(x = Division, y = Units, fill = Year) + 
+  geom_bar(stat = "identity",position = "dodge")+theme(axis.text.x = element_text(angle = 315,hjust = 0.1)))
+
+#From the graph it is clear that there is significat improvement in the units sold from 2015 to 2016 respectively.
+#No state registered a decline in the units.
+
+```
+
+
+```{r}
+
+#6.Creating a new column QTR based on the Month
+
+salesdata$Month <- as.character(salesdata$Month)
+
+salesdata$QTR <- if_else(salesdata$Month == "Jan" | salesdata$Month == "Feb" | 
+                           salesdata$Month ==   "Mar","Q1",if_else(salesdata$Month == "Apr" | salesdata$Month == "May" | 
+                           salesdata$Month ==   "Jun","Q2",if_else(salesdata$Month == "Jul" | salesdata$Month == "Aug" | 
+                           salesdata$Month ==   "Sep","Q3","Q4")))
+
+```
+
+
+```{r}
+
+#7.Compare QTR wise sales in 2015 and 2016
+
+g1 <- dplyr::group_by(salesdata,QTR)%>%dplyr::summarise(Sales = sum(Sales2015))
+
+g1$Year <- rep("TotalSales2015")
+
+g2 <- dplyr::group_by(salesdata,QTR)%>%dplyr::summarise(Sales = sum(Sales2016))
+
+g2$Year <- rep("TotalSales2016")
+
+q7 <- rbind(g1,g2)
+
+plotly::ggplotly(ggplot(q7) + aes(x = QTR, y = Sales, fill = Year) + 
+  geom_bar(stat = "identity",position = "dodge"))
+
+```
+
+
+```{r}
+
+#8.QTR wise sales for the year 2015 with regards to all the Tiers
+
+h1 <- dplyr::filter(salesdata,QTR == "Q1")[,c("QTR","Tier","Sales2015")]
+
+h.1 <- dplyr::group_by(h1,QTR,Tier)%>%dplyr::summarise(Sales = round(sum(Sales2015)))
+
+h.1_pie_x <- h.1$Sales
+h.1_pie_y <- h.1$Tier
+
+h2 <- dplyr::filter(salesdata,QTR == "Q2")[,c("QTR","Tier","Sales2015")]
+
+h.2 <- dplyr::group_by(h2,QTR,Tier)%>%dplyr::summarise(Sales = round(sum(Sales2015)))
+
+h.2_pie_x <- h.2$Sales
+h.2_pie_y <- h.2$Tier
+
+h3 <- dplyr::filter(salesdata,QTR == "Q3")[,c("QTR","Tier","Sales2015")]
+
+h.3 <- dplyr::group_by(h3,QTR,Tier)%>%dplyr::summarise(Sales = round(sum(Sales2015)))
+
+h.3_pie_x <- h.3$Sales
+h.3_pie_y <- h.3$Tier
+
+h4 <- dplyr::filter(salesdata,QTR == "Q4")[,c("QTR","Tier","Sales2015")]
+
+h.4 <- dplyr::group_by(h4,QTR,Tier)%>%dplyr::summarise(Sales = round(sum(Sales2015)))
+
+h.4_pie_x <- h.4$Sales
+h.4_pie_y <- h.4$Tier
+
+
+pie(h.1_pie_x,h.1_pie_y,main = "Qtr1")
+pie(h.2_pie_x,h.2_pie_y,main = "Qtr2")
+pie(h.3_pie_x,h.3_pie_y,main = "Qtr3")
+pie(h.4_pie_x,h.4_pie_y,main = "Qtr4")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
